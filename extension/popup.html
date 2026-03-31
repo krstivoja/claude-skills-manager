@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #1a1a1e;
+      --surface: #232328;
+      --hover: #2a2a30;
+      --border: #3a3a42;
+      --text: #e8e6e3;
+      --text-dim: #9b9a97;
+      --text-faint: #6b6a68;
+      --accent: #c97f4a;
+      --accent-hover: #d9914f;
+      --accent-soft: rgba(201, 127, 74, 0.12);
+      --success: #5bb98c;
+      --success-soft: rgba(91, 185, 140, 0.12);
+      --danger: #e06c6c;
+      --warning: #d4a843;
+      --warning-soft: rgba(212, 168, 67, 0.12);
+      --r: 8px;
+    }
+
+    body {
+      width: 380px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 18px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      width: 26px; height: 26px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: grid; place-items: center;
+      font-size: 13px; font-weight: 700; color: #fff;
+    }
+
+    .header h1 { font-size: 14px; font-weight: 600; }
+    .header h1 span { color: var(--text-dim); font-weight: 400; }
+
+    /* ── Folder picker ── */
+    .folder-section {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .folder-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .folder-path {
+      flex: 1;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      background: var(--surface);
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .folder-path.empty { color: var(--text-faint); font-style: italic; }
+
+    .btn-small {
+      padding: 7px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.12s;
+    }
+    .btn-small:hover { background: var(--hover); }
+
+    /* ── Skills list ── */
+    .skills-section { padding: 10px 18px 6px; }
+
+    .skills-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .skills-title h2 {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-dim);
+    }
+
+    .skills-count {
+      font-size: 11px;
+      color: var(--text-faint);
+    }
+
+    .skills-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-height: 320px;
+      overflow-y: auto;
+      padding-bottom: 8px;
+    }
+
+    .skills-list::-webkit-scrollbar { width: 4px; }
+    .skills-list::-webkit-scrollbar-track { background: transparent; }
+    .skills-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .skill-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 8px;
+      border-radius: 6px;
+    }
+
+    .skill-item:nth-child(odd) { background: rgba(255,255,255,0.015); }
+
+    .skill-icon {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .skill-name {
+      flex: 1;
+      font-size: 12.5px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .skill-size {
+      font-size: 10px;
+      color: var(--text-faint);
+      flex-shrink: 0;
+    }
+
+    .empty-msg {
+      text-align: center;
+      padding: 28px 0;
+      color: var(--text-faint);
+      font-size: 12px;
+    }
+
+    .empty-msg p + p { margin-top: 6px; }
+
+    /* ── Sync button ── */
+    .sync-section {
+      padding: 12px 18px 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn-sync {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--r);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s, opacity 0.12s;
+    }
+    .btn-sync:hover { background: var(--accent-hover); }
+    .btn-sync:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Progress ── */
+    .progress { display: none; padding: 0 18px 14px; }
+    .progress.active { display: block; }
+
+    .progress-track {
+      height: 3px;
+      background: var(--surface);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 6px;
+      text-align: center;
+    }
+
+    /* ── Status toast ── */
+    .toast {
+      display: none;
+      padding: 10px 18px;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+      border-top: 1px solid var(--border);
+    }
+
+    .toast.show { display: block; }
+    .toast.success { background: var(--success-soft); color: var(--success); }
+    .toast.error { background: rgba(224,108,108,0.12); color: var(--danger); }
+    .toast.warning { background: var(--warning-soft); color: var(--warning); }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">⚡</div>
+    <h1>Skills Sync <span>for Claude</span></h1>
+  </div>
+
+  <!-- Folder picker -->
+  <div class="folder-section">
+    <div class="folder-row">
+      <div class="folder-path empty" id="folderPath">No folder selected</div>
+      <button class="btn-small" id="btnFolder">Select Folder</button>
+    </div>
+  </div>
+
+  <!-- Skills list -->
+  <div class="skills-section">
+    <div class="skills-title">
+      <h2>Skills Found</h2>
+      <span class="skills-count" id="skillsCount"></span>
+    </div>
+    <div class="skills-list" id="skillsList">
+      <div class="empty-msg">
+        <p>Select your skills folder to get started</p>
+        <p>Usually <code style="font-size:11px;">~/.claude/skills</code></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress" id="progress">
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-label" id="progressLabel">Preparing...</div>
+  </div>
+
+  <!-- Sync button -->
+  <div class="sync-section">
+    <button class="btn-sync" id="btnSync" disabled>Sync All to Claude.ai</button>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- JSZip from CDN bundled inline for extension -->
+  <script src="jszip.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
