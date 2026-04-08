@@ -26,7 +26,9 @@ When you update skills locally in `~/.claude/skills/`, you have to manually uplo
 ## Usage
 
 1. Click the extension icon in your Chrome toolbar
-2. Click **Select Folder** and pick your skills directory (e.g. `~/.claude/skills`)
+2. Click **Select Folder** and pick your skills directory
+   - macOS / Linux: `~/.claude/skills`
+   - Windows: `%USERPROFILE%\.claude\skills` (i.e. `C:\Users\<you>\.claude\skills`)
 3. The extension scans and lists all skill folders containing a `SKILL.md`
 4. Click **Sync All to Claude.ai** to upload everything
 
@@ -68,7 +70,7 @@ Everything runs client-side. No data leaves your browser except the normal uploa
 
 ## Requirements
 
-- Chrome 86+ (uses the File System Access API)
+- Any Chromium-based browser (Chrome, Edge, Brave, Opera, Vivaldi, Arc)
 - A Claude.ai account with skills enabled
 
 ## Troubleshooting
@@ -77,7 +79,7 @@ Everything runs client-side. No data leaves your browser except the normal uploa
 Open the Claude.ai skills page manually (`claude.ai/customize/skills`) and check if the UI has changed. The extension relies on finding a file input element on that page.
 
 **Folder picker doesn't appear**
-The File System Access API is Chrome-only. Firefox and Safari are not supported.
+The extension uses `<input type="file" webkitdirectory>`, which works in every Chromium browser (Chrome, Edge, Brave, Opera, Vivaldi, Arc) with no flags required. If the picker still doesn't open, make sure you're clicking the extension icon to open the popup window first.
 
 **"No file input found after clicking upload button"**
 Claude.ai may have updated their UI. The extension searches for upload buttons by text content and aria-labels. If these change, the selectors in `background.js` need updating.

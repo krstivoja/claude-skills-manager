@@ -248,6 +248,7 @@
     <div class="folder-row">
       <div class="folder-path empty" id="folderPath">No folder selected</div>
       <button class="btn-small" id="btnFolder">Select Folder</button>
+      <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none;">
     </div>
   </div>
 
@@ -260,7 +261,7 @@
     <div class="skills-list" id="skillsList">
       <div class="empty-msg">
         <p>Select your skills folder to get started</p>
-        <p>Usually <code style="font-size:11px;">~/.claude/skills</code></p>
+        <p>Usually <code id="defaultPathHint" style="font-size:11px;">~/.claude/skills</code></p>
       </div>
     </div>
   </div>

@@ -1,14 +1,20 @@
 /**
  * Claude Skills Sync — Popup
  *
- * 1. User picks their skills folder (File System Access API)
- * 2. Extension scans for SKILL.md in each subfolder
+ * 1. User picks their skills folder via <input type="file" webkitdirectory>
+ * 2. Extension scans for SKILL.md in each top-level subfolder
  * 3. Click "Sync All" → zips each skill → uploads to Claude.ai
+ *
+ * Why webkitdirectory instead of File System Access API?
+ *   showDirectoryPicker() is gated/disabled in Brave (and some other Chromium
+ *   forks) and even when enabled it dismisses the action popup on focus loss.
+ *   <input webkitdirectory> works in every Chromium browser with no flags.
  */
 
 // DOM
 const $folderPath = document.getElementById("folderPath");
 const $btnFolder = document.getElementById("btnFolder");
+const $folderInput = document.getElementById("folderInput");
 const $skillsList = document.getElementById("skillsList");
 const $skillsCount = document.getElementById("skillsCount");
 const $btnSync = document.getElementById("btnSync");
@@ -17,70 +23,81 @@ const $progressFill = document.getElementById("progressFill");
 const $progressLabel = document.getElementById("progressLabel");
 const $toast = document.getElementById("toast");
 
-let skills = []; // [{ name, handle (DirectoryHandle), files: [{path, handle}] }]
-let rootHandle = null;
+let skills = []; // [{ name, files: [{ relativePath, file }] }]
+
+// ── Platform-aware default path hint ──
+
+(function setDefaultPathHint() {
+  const hint = document.getElementById("defaultPathHint");
+  if (!hint) return;
+  const isWindows = /Win/i.test(navigator.platform) ||
+    (navigator.userAgentData && navigator.userAgentData.platform === "Windows");
+  hint.textContent = isWindows
+    ? "%USERPROFILE%\\.claude\\skills"
+    : "~/.claude/skills";
+})();
 
 // ── Folder Picker ──
 
-$btnFolder.addEventListener("click", async () => {
-  try {
-    rootHandle = await window.showDirectoryPicker({ mode: "read" });
-    $folderPath.textContent = rootHandle.name;
-    $folderPath.classList.remove("empty");
+$btnFolder.addEventListener("click", () => {
+  // Reset so picking the same folder twice still fires `change`.
+  $folderInput.value = "";
+  $folderInput.click();
+});
 
-    await scanSkills();
+$folderInput.addEventListener("change", () => {
+  const fileList = $folderInput.files;
+  if (!fileList || fileList.length === 0) return;
+
+  try {
+    scanSkills(fileList);
   } catch (err) {
-    if (err.name !== "AbortError") {
-      showToast("Could not access folder", "error");
-    }
+    console.error("Folder scan failed:", err);
+    showToast(`Could not read folder: ${err.message || err}`, "error");
   }
 });
 
 // ── Scan Skills ──
 
-async function scanSkills() {
+function scanSkills(fileList) {
+  // Each File has a `webkitRelativePath` like "skills/my-skill/SKILL.md".
+  // The first path segment is the folder the user picked; we group by the
+  // *second* segment (the skill folder name).
+  const filesArr = Array.from(fileList);
+
+  // Determine the root folder name from the first file.
+  const firstPath = filesArr[0].webkitRelativePath || "";
+  const rootName = firstPath.split("/")[0] || "skills";
+
+  $folderPath.textContent = rootName;
+  $folderPath.classList.remove("empty");
+
+  // Group files by top-level skill folder, skipping hidden entries.
+  const groups = new Map(); // skillName -> [{ relativePath, file }]
+  for (const file of filesArr) {
+    const path = file.webkitRelativePath;
+    if (!path) continue;
+    const parts = path.split("/");
+    if (parts.length < 3) continue; // need root/skill/file at minimum
+    if (parts.some((p) => p.startsWith("."))) continue; // skip hidden
+
+    const skillName = parts[1];
+    const relativePath = parts.slice(2).join("/"); // path inside the skill folder
+
+    if (!groups.has(skillName)) groups.set(skillName, []);
+    groups.get(skillName).push({ relativePath, file });
+  }
+
+  // Keep only folders that contain a SKILL.md at their root.
   skills = [];
-
-  for await (const [name, handle] of rootHandle.entries()) {
-    // Skip hidden folders/files
-    if (name.startsWith(".")) continue;
-    if (handle.kind !== "directory") continue;
-
-    // Check if it has a SKILL.md
-    try {
-      await handle.getFileHandle("SKILL.md");
-    } catch {
-      continue; // No SKILL.md, skip
-    }
-
-    // Collect all files in the skill folder (recursive)
-    const files = await collectFiles(handle, name);
-    skills.push({ name, handle, files });
+  for (const [name, files] of groups.entries()) {
+    const hasSkillMd = files.some((f) => f.relativePath === "SKILL.md");
+    if (!hasSkillMd) continue;
+    skills.push({ name, files });
   }
 
-  // Sort alphabetically
   skills.sort((a, b) => a.name.localeCompare(b.name));
-
   renderSkills();
-}
-
-async function collectFiles(dirHandle, basePath) {
-  const files = [];
-
-  for await (const [name, handle] of dirHandle.entries()) {
-    if (name.startsWith(".")) continue;
-
-    const fullPath = `${basePath}/${name}`;
-
-    if (handle.kind === "file") {
-      files.push({ path: fullPath, handle });
-    } else if (handle.kind === "directory") {
-      const subFiles = await collectFiles(handle, fullPath);
-      files.push(...subFiles);
-    }
-  }
-
-  return files;
 }
 
 // ── Render ──
@@ -137,11 +154,8 @@ async function startSync() {
       const folder = zip.folder(skill.name);
 
       for (const f of skill.files) {
-        const file = await f.handle.getFile();
-        const content = await file.arrayBuffer();
-        // Path relative to skill folder: remove "skillName/" prefix
-        const relativePath = f.path.substring(skill.name.length + 1);
-        folder.file(relativePath, content);
+        const content = await f.file.arrayBuffer();
+        folder.file(f.relativePath, content);
       }
 
       const blob = await zip.generateAsync({ type: "blob" });
